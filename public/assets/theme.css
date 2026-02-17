@@ -1,0 +1,32 @@
+/* Minimal SaaS-ish background + small motion (Tailwind-compatible) */
+
+:root {
+  --bg0: #f8fafc;
+  --bg1: #eef2ff;
+  --ink: #0f172a;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 700px at 10% -10%, rgba(99,102,241,0.12), transparent 60%),
+    radial-gradient(900px 600px at 100% 0%, rgba(14,165,233,0.10), transparent 55%),
+    radial-gradient(1000px 700px at 80% 120%, rgba(16,185,129,0.10), transparent 55%),
+    linear-gradient(180deg, var(--bg0), #ffffff);
+}
+
+@keyframes pop {
+  from { transform: translateY(8px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes floatIn {
+  from { transform: translateY(14px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.float-in { animation: floatIn .45s ease-out both; }

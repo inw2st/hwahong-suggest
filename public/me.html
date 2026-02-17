@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>학교 건의사항 - 내 건의</title>
+
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Pretendard', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Noto Sans KR', 'Apple SD Gothic Neo', 'sans-serif'],
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="/assets/theme.css" />
+  </head>
+  <body class="font-sans">
+    <header class="sticky top-0 z-40 backdrop-blur bg-white/70 border-b border-slate-100">
+      <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-3 group">
+          <div class="h-9 w-9 rounded-2xl bg-slate-900 text-white grid place-items-center shadow-sm group-hover:shadow-md transition">S</div>
+          <div>
+            <div class="text-sm font-semibold text-slate-900 leading-none">내 건의</div>
+            <div class="text-xs text-slate-500 mt-1">대기/답변 상태 확인</div>
+          </div>
+        </a>
+        <nav class="flex items-center gap-2">
+          <a href="/" class="px-3 py-2 rounded-2xl text-sm text-slate-700 hover:bg-slate-100 transition">작성</a>
+          <a href="/admin/login.html" class="px-3 py-2 rounded-2xl text-sm text-slate-700 hover:bg-slate-100 transition">관리자</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-10">
+      <section class="float-in">
+        <div class="flex items-end justify-between gap-6 flex-wrap">
+          <div>
+            <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">내가 작성한 건의</h1>
+            <p class="text-slate-600 mt-2">답변이 달리면 카드에 표시되고, 알림이 허용된 경우 브라우저 알림으로 알려드려요.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="refreshBtn" class="px-4 py-2 rounded-2xl bg-white ring-1 ring-slate-200 text-sm font-semibold hover:bg-slate-50 transition">새로고침</button>
+            <button id="notifyBtn" class="px-4 py-2 rounded-2xl bg-slate-900 text-white text-sm font-semibold shadow-sm hover:shadow-md transition">알림 설정</button>
+            <!-- 로컬에서만 테스트 버튼 표시 -->
+            <span id="devButtons">
+              <button id="resetWatermarkBtn" class="px-4 py-2 rounded-2xl bg-amber-500 text-white text-sm font-semibold shadow-sm hover:shadow-md transition">워터마크 초기화</button>
+              <button id="testNotifyBtn" class="px-4 py-2 rounded-2xl bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:shadow-md transition">테스트</button>
+            </span>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-3xl bg-white shadow-md ring-1 ring-slate-200 p-4 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div class="text-xs text-slate-500">내 식별키 (localStorage)</div>
+            <div id="studentKey" class="text-sm font-mono text-slate-800 mt-1 select-all"></div>
+          </div>
+          <div class="text-xs text-slate-500">팁: 다른 기기에서는 동일 키가 없어서 내 목록이 보이지 않아요.</div>
+        </div>
+
+        <div id="list" class="mt-8 grid grid-cols-1 gap-6"></div>
+      </section>
+    </main>
+
+    <script src="/assets/app.js"></script>
+    <script>
+      const listEl = document.getElementById('list');
+      const studentKeyEl = document.getElementById('studentKey');
+      studentKeyEl.textContent = App.getStudentKey();
+
+      // 로컬 개발 환경에서만 개발 버튼 표시
+      const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if (!isLocal) {
+        document.getElementById('devButtons').style.display = 'none';
+      }
+
+      // VAPID Public Key (백엔드 .env 와 동일해야 함)
+      const VAPID_PUBLIC_KEY = 'BJpbfzPQdhyWeK9lv9Rs6S3bdqYZpgAUqTuw6j0-ME2sxXWM8THv4d1ZCow2BtjPoULAqJb5yy86mPkXly0Fqpc';
+
+      // Service Worker 등록 (Push API용)
+      let swRegistration = null;
+      let pushSubscription = null;
+      
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => {
+            swRegistration = reg;
+            console.log('Service Worker 등록됨');
+            
+            // 기존 Push 구독 확인
+            reg.pushManager.getSubscription().then((sub) => {
+              if (sub) {
+                pushSubscription = sub;
+                console.log('기존 Push 구독 있음');
+              }
+            });
+          })
+          .catch((err) => console.log('SW 등록 실패:', err));
+      }
+
+      // Push 구독 함수
+      async function subscribeToPush() {
+        if (!swRegistration) {
+          console.log('SW 없음');
+          return null;
+        }
+        
+        try {
+          const sub = await swRegistration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          });
+          
+          console.log('Push 구독 성공:', sub.endpoint);
+          
+          // 서버에 구독 정보 저장
+          await App.apiFetch('/push/subscribe', {
+            method: 'POST',
+            body: {
+              endpoint: sub.endpoint,
+              p256dh: arrayBufferToBase64Url(sub.getKey('p256dh')),
+              auth: arrayBufferToBase64Url(sub.getKey('auth'))
+            }
+          });
+          
+          pushSubscription = sub;
+          return sub;
+        } catch (e) {
+          console.log('Push 구독 실패:', e);
+          return null;
+        }
+      }
+
+      // Uint8Array 변환 유틸
+      function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+      }
+
+      function arrayBufferToBase64Url(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      }
+
+      // Service Worker를 우선으로 하는 알림 함수
+      async function showNotification(title, body, tag) {
+        // 1. Service Worker 알림 시도 (백그라운드에서도 작동)
+        if (swRegistration) {
+          try {
+            await swRegistration.showNotification(title, {
+              body: body,
+              icon: '/assets/icon.png',
+              tag: tag || 'suggestion',
+              requireInteraction: true,
+              vibrate: [200, 100, 200]
+            });
+            console.log('SW 알림 성공');
+            return;
+          } catch (e) {
+            console.log('SW 알림 실패, 브라우저 알림 시도:', e);
+          }
+        }
+        
+        // 2. 폴백: 일반 브라우저 알림
+        if (Notification.permission === 'granted') {
+          try {
+            new Notification(title, { 
+              body: body, 
+              icon: '/assets/icon.png',
+              tag: tag,
+              requireInteraction: true,
+            });
+            console.log('브라우저 알림 성공');
+          } catch (e) {
+            console.log('브라우저 알림 실패:', e);
+          }
+        }
+      }
+
+      function badge(status) {
+        const cls = status === 'answered'
+          ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+          : 'bg-amber-50 text-amber-700 ring-1 ring-amber-200';
+        const label = status === 'answered' ? '답변완료' : '대기중';
+        return App.el('span', { class: `px-3 py-1 rounded-full text-xs font-semibold ${cls}` }, [label]);
+      }
+
+      function fmt(dt) {
+        try {
+          return new Date(dt).toLocaleString('ko-KR', { hour12: false });
+        } catch {
+          return String(dt);
+        }
+      }
+
+      function card(s) {
+        const wrap = App.el('div', { class: 'rounded-3xl bg-white shadow-md ring-1 ring-slate-200 overflow-hidden hover:shadow-lg transition duration-200' });
+        const head = App.el('div', { class: 'px-6 py-5 border-b border-slate-100 flex items-start justify-between gap-4' });
+        const title = App.el('div', {}, [
+          App.el('div', { class: 'text-sm text-slate-500' }, [`${s.grade}학년 · ${fmt(s.created_at)}`]),
+          App.el('div', { class: 'text-lg font-semibold text-slate-900 mt-1' }, [s.title]),
+        ]);
+        head.append(title, badge(s.status));
+
+        const body = App.el('div', { class: 'px-6 py-5 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap' }, [s.content]);
+
+        const actions = App.el('div', { class: 'px-6 py-5 bg-slate-50 flex items-center justify-between gap-4 flex-wrap' });
+        const left = App.el('div', { class: 'text-xs text-slate-500' }, [`업데이트: ${fmt(s.updated_at)}`]);
+
+        const btnRow = App.el('div', { class: 'flex items-center gap-2' });
+        const editBtn = App.el('button', {
+          class: 'px-4 py-2 rounded-2xl bg-white ring-1 ring-slate-200 text-sm font-semibold hover:bg-slate-50 transition disabled:opacity-50',
+          disabled: s.status !== 'pending',
+          onclick: () => openEdit(s),
+        }, ['수정']);
+        const delBtn = App.el('button', {
+          class: 'px-4 py-2 rounded-2xl bg-white ring-1 ring-slate-200 text-sm font-semibold hover:bg-slate-50 transition disabled:opacity-50',
+          disabled: s.status !== 'pending',
+          onclick: () => onDelete(s),
+        }, ['삭제']);
+        btnRow.append(editBtn, delBtn);
+        actions.append(left, btnRow);
+
+        wrap.append(head, body);
+
+        if (s.status === 'answered' && s.answer) {
+          const answer = App.el('div', { class: 'px-6 py-5 border-t border-slate-100 bg-white' }, [
+            App.el('div', { class: 'text-sm font-semibold text-slate-900' }, ['답변']),
+            App.el('div', { class: 'text-xs text-slate-500 mt-1' }, [s.answered_at ? fmt(s.answered_at) : '']),
+            App.el('div', { class: 'mt-3 rounded-2xl bg-slate-50 ring-1 ring-slate-200 p-4 text-sm text-slate-700 whitespace-pre-wrap' }, [s.answer]),
+          ]);
+          wrap.append(answer);
+        }
+
+        wrap.append(actions);
+        return wrap;
+      }
+
+      async function load() {
+        listEl.innerHTML = App.el('div', { class: 'text-sm text-slate-500' }, ['불러오는 중...']).outerHTML;
+        try {
+          const items = await App.apiFetch('/me/suggestions');
+          if (!items.length) {
+            listEl.innerHTML = '';
+            listEl.appendChild(App.el('div', { class: 'rounded-3xl bg-white shadow-md ring-1 ring-slate-200 p-8 text-center' }, [
+              App.el('div', { class: 'text-lg font-semibold text-slate-900' }, ['아직 작성한 건의가 없어요.']),
+              App.el('div', { class: 'text-sm text-slate-600 mt-2' }, ['첫 건의를 작성해 보세요.']),
+              App.el('a', { href: '/', class: 'inline-flex mt-5 px-5 py-3 rounded-2xl bg-slate-900 text-white text-sm font-semibold shadow-sm hover:shadow-md transition' }, ['건의 작성으로 이동']),
+            ]));
+            return;
+          }
+          listEl.innerHTML = '';
+          items.forEach((s) => listEl.appendChild(card(s)));
+        } catch (err) {
+          listEl.innerHTML = '';
+          listEl.appendChild(App.el('div', { class: 'rounded-3xl bg-white shadow-md ring-1 ring-slate-200 p-6' }, [
+            App.el('div', { class: 'text-sm font-semibold text-slate-900' }, ['불러오기 실패']),
+            App.el('div', { class: 'text-sm text-slate-600 mt-2' }, [err.message || 'API 오류']),
+            App.el('div', { class: 'text-xs text-slate-500 mt-3' }, [`API_BASE: ${App.API_BASE}`]),
+          ]));
+        }
+      }
+
+      function openEdit(s) {
+        const overlay = App.el('div', { class: 'fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4' });
+        const card = App.el('div', { class: 'w-full max-w-lg rounded-3xl bg-white shadow-xl ring-1 ring-slate-200 overflow-hidden animate-[pop_.18s_ease-out]' });
+        const head = App.el('div', { class: 'px-6 py-5 border-b border-slate-100 flex items-center justify-between' }, [
+          App.el('div', {}, [
+            App.el('div', { class: 'text-base font-semibold text-slate-900' }, ['건의 수정']),
+            App.el('div', { class: 'text-xs text-slate-500 mt-1' }, ['답변 전(대기중) 상태에서만 수정할 수 있어요.']),
+          ]),
+          App.el('button', { class: 'px-3 py-2 rounded-2xl hover:bg-slate-100 transition', onclick: () => overlay.remove() }, ['닫기']),
+        ]);
+
+        const grade = App.el('select', { class: 'w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200/60' },
+          Array.from({ length: 3 }).map((_, i) => {
+            const g = i + 1;
+            const opt = document.createElement('option');
+            opt.value = String(g);
+            opt.textContent = `${g}학년`;
+            if (g === s.grade) opt.selected = true;
+            return opt;
+          })
+        );
+
+        const title = App.el('input', { value: s.title, class: 'w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200/60' });
+        const content = App.el('textarea', { class: 'w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200/60', rows: '7' }, [s.content]);
+
+        const body = App.el('div', { class: 'px-6 py-6 space-y-4' }, [
+          App.el('div', {}, [App.el('div', { class: 'text-sm font-medium text-slate-800' }, ['학년']), grade]),
+          App.el('div', {}, [App.el('div', { class: 'text-sm font-medium text-slate-800' }, ['제목']), App.el('div', { class: 'mt-2' }, [title])]),
+          App.el('div', {}, [App.el('div', { class: 'text-sm font-medium text-slate-800' }, ['내용']), App.el('div', { class: 'mt-2' }, [content])]),
+        ]);
+
+        const saveBtn = App.el('button', { class: 'px-5 py-3 rounded-2xl bg-slate-900 text-white text-sm font-semibold shadow-sm hover:shadow-md transition' }, ['저장']);
+        saveBtn.addEventListener('click', async () => {
+          saveBtn.disabled = true;
+          saveBtn.classList.add('opacity-60');
+          try {
+            await App.apiFetch(`/me/suggestions/${s.id}`, {
+              method: 'PATCH',
+              body: { grade: Number(grade.value), title: title.value, content: content.value },
+            });
+            App.toast('수정되었습니다.', 'success');
+            overlay.remove();
+            await load();
+          } catch (err) {
+            App.toast(err.message || '수정 실패', 'error');
+          } finally {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-60');
+          }
+        });
+
+        const foot = App.el('div', { class: 'px-6 py-5 bg-slate-50 flex items-center justify-end gap-2' }, [
+          App.el('button', { class: 'px-4 py-2 rounded-2xl bg-white ring-1 ring-slate-200 text-sm font-semibold hover:bg-slate-50 transition', onclick: () => overlay.remove() }, ['취소']),
+          saveBtn,
+        ]);
+
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        card.append(head, body, foot);
+        overlay.append(card);
+        document.body.append(overlay);
+      }
+
+      async function onDelete(s) {
+        if (!confirm('정말 삭제할까요? (대기중 상태에서만 삭제 가능)')) return;
+        try {
+          await App.apiFetch(`/me/suggestions/${s.id}`, { method: 'DELETE' });
+          App.toast('삭제되었습니다.', 'success');
+          await load();
+        } catch (err) {
+          App.toast(err.message || '삭제 실패', 'error');
+        }
+      }
+
+      // Polling-based notifications: check for newly answered suggestions.
+      async function pollNewAnswers() {
+        if (Notification.permission !== 'granted') return;
+        try {
+          const items = await App.apiFetch('/me/suggestions');
+          const lastWatermark = localStorage.getItem('last_answered_at');
+          
+          // 모든 답변된 건의를 확인
+          const answered = items.filter((s) => s.status === 'answered' && s.answered_at);
+          
+          if (answered.length > 0) {
+            // 최신 답변 찾기
+            const sortedAnswers = answered
+              .map(s => ({ ...s, answeredAt: new Date(s.answered_at).getTime() }))
+              .sort((a, b) => b.answeredAt - a.answeredAt);
+            
+            const latestAnswerTime = sortedAnswers[0].answeredAt;
+            
+            // 마지막으로 알려준 이후의 새로운 답변이 있는지 확인
+            if (lastWatermark) {
+              const lastTime = new Date(lastWatermark).getTime();
+              const newAnswers = sortedAnswers.filter(a => a.answeredAt > lastTime);
+              
+              // Push API가 알림을 처리하므로 여기서는 알림을 별도로 본내지 않음
+              // newAnswers.forEach((s) => {
+              //   showNotification('새 답변이 도착했어요', s.title, 'suggestion-' + s.id);
+              // });
+              
+              if (newAnswers.length > 0) {
+                await load(); // UI 새로고침
+              }
+            }
+            
+            // 워터마크 업데이트
+            localStorage.setItem('last_answered_at', new Date(latestAnswerTime).toISOString());
+          }
+        } catch {
+          // Silent failure
+        }
+      }
+
+      document.getElementById('refreshBtn').addEventListener('click', load);
+      
+      // 테스트 알림 버튼
+      document.getElementById('testNotifyBtn').addEventListener('click', async () => {
+        console.log('Notification 권한:', Notification.permission);
+        console.log('SW:', swRegistration);
+        
+        // 알림 권한 요청
+        if (Notification.permission !== 'granted') {
+          await Notification.requestPermission();
+        }
+        
+        // Service Worker로 알림
+        await showNotification('테스트 알림', 'Service Worker 알림 테스트!', 'test');
+        App.toast('알림을 띄웠습니다!', 'success');
+      });
+      
+      // 워터마크 초기화 버튼
+      document.getElementById('resetWatermarkBtn').addEventListener('click', () => {
+        localStorage.removeItem('last_answered_at');
+        App.toast('워터마크가 초기화되었습니다. 이제 답변 시 알림이 옵니다.', 'success');
+      });
+      
+      document.getElementById('notifyBtn').addEventListener('click', async () => {
+        // 브라우저 알림 권한 요청
+        const p = await Notification.requestPermission();
+        if (p !== 'granted') {
+          App.toast('알림이 허용되지 않았습니다.', 'error');
+          return;
+        }
+
+        // Push API 구독 (서버가 푸시를 보내기 위함)
+        await subscribeToPush();
+        
+        App.toast('알림이 켜졌습니다. 페이지 닫아도 답변 시 알림이 옵니다!', 'success');
+        
+        // 워터마크 초기화
+        try {
+          const items = await App.apiFetch('/me/suggestions');
+          const answered = items.filter((s) => s.status === 'answered' && s.answered_at);
+          if (answered.length > 0) {
+            const maxTime = answered
+              .map(s => new Date(s.answered_at).getTime())
+              .sort((a, b) => b - a)[0];
+            localStorage.setItem('last_answered_at', new Date(maxTime).toISOString());
+          } else {
+            localStorage.setItem('last_answered_at', new Date().toISOString());
+          }
+        } catch (e) {
+          console.log('워터마크 초기화 실패:', e);
+        }
+      });
+
+      load();
+      setInterval(pollNewAnswers, 5000); // 5초마다 확인
+      pollNewAnswers();
+    </script>
+  </body>
+</html>

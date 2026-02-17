@@ -1,0 +1,14 @@
+[Unit]
+Description=School Suggestions FastAPI
+After=network.target postgresql.service
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/suggesting_new
+ExecStart=/home/ubuntu/suggesting_new/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=3
+EnvironmentFile=/home/ubuntu/suggesting_new/.env
+
+[Install]
+WantedBy=multi-user.target

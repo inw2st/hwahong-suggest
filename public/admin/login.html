@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>관리자 로그인</title>
+
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Pretendard', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Noto Sans KR', 'Apple SD Gothic Neo', 'sans-serif'],
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="/assets/theme.css" />
+  </head>
+  <body class="font-sans">
+    <main class="min-h-screen flex items-center justify-center px-4">
+      <div class="w-full max-w-md float-in">
+        <a href="/" class="inline-flex items-center gap-3 mb-6">
+          <div class="h-10 w-10 rounded-2xl bg-slate-900 text-white grid place-items-center shadow-md">S</div>
+          <div>
+            <div class="text-sm font-semibold text-slate-900">Admin Console</div>
+            <div class="text-xs text-slate-500 mt-1">학교 건의사항 관리</div>
+          </div>
+        </a>
+
+        <div class="rounded-3xl bg-white shadow-md ring-1 ring-slate-200 overflow-hidden">
+          <div class="px-6 py-5 border-b border-slate-100">
+            <div class="text-base font-semibold text-slate-900">로그인</div>
+            <div class="text-xs text-slate-500 mt-1">JWT 기반 인증 (관리자 전용)</div>
+          </div>
+          <form id="form" class="px-6 py-6 space-y-4">
+            <div>
+              <label class="text-sm font-medium text-slate-800" for="username">아이디</label>
+              <input id="username" required minlength="3" maxlength="64"
+                class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200/60" />
+            </div>
+            <div>
+              <label class="text-sm font-medium text-slate-800" for="password">비밀번호</label>
+              <input id="password" type="password" required minlength="8" maxlength="128"
+                class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200/60" />
+            </div>
+            <button id="loginBtn" type="submit"
+              class="w-full mt-2 px-5 py-3 rounded-2xl bg-slate-900 text-white text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-200">
+              로그인
+            </button>
+            <div class="text-xs text-slate-500">초기 계정은 로컬에서 `scripts/create_admin.py`로 생성하세요.</div>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <script src="/assets/app.js"></script>
+    <script>
+      const token = localStorage.getItem('admin_token');
+      if (token) {
+        location.href = '/admin/index.html';
+      }
+
+      document.getElementById('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const loginBtn = document.getElementById('loginBtn');
+        loginBtn.disabled = true;
+        loginBtn.classList.add('opacity-60');
+
+        try {
+          const data = await App.apiFetch('/admin/login', {
+            method: 'POST',
+            headers: {},
+            body: {
+              username: document.getElementById('username').value,
+              password: document.getElementById('password').value,
+            },
+          });
+          localStorage.setItem('admin_token', data.access_token);
+          App.toast('로그인 성공', 'success');
+          setTimeout(() => location.href = '/admin/index.html', 200);
+        } catch (err) {
+          App.toast(err.message || '로그인 실패', 'error');
+        } finally {
+          loginBtn.disabled = false;
+          loginBtn.classList.remove('opacity-60');
+        }
+      });
+    </script>
+  </body>
+</html>

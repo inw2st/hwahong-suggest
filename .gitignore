@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+venv/
+suggestions.db
+.DS_Store
+*.key
+*.pem
