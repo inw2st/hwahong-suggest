@@ -3,8 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>학교 건의사항 - 작성</title>
-
+    <title>화홍고 학생회 건의함</title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,105 +12,148 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Pretendard', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Noto Sans KR', 'Apple SD Gothic Neo', 'sans-serif'],
+              sans: ['Pretendard', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
             },
+            colors: {
+              hwahong: {
+                50:  '#eff6ff',
+                100: '#dbeafe',
+                500: '#1d4ed8',
+                600: '#1e40af',
+                700: '#1e3a8a',
+                800: '#1e3380',
+                900: '#172554',
+              }
+            }
           },
         },
       };
     </script>
     <link rel="stylesheet" href="/assets/theme.css" />
+    <style>
+      .hero-bg {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%);
+      }
+      .float-in { animation: floatIn 0.4s ease both; }
+      @keyframes floatIn {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+    </style>
   </head>
-  <body class="font-sans">
-    <header class="sticky top-0 z-40 backdrop-blur bg-white/70 border-b border-slate-100">
-      <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+  <body class="font-sans bg-slate-50 min-h-screen">
+
+    <!-- 헤더 -->
+    <header class="sticky top-0 z-40 backdrop-blur bg-white/90 border-b border-slate-200 shadow-sm">
+      <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         <a href="/" class="flex items-center gap-3 group">
-          <div class="h-9 w-9 rounded-2xl bg-slate-900 text-white grid place-items-center shadow-sm group-hover:shadow-md transition">S</div>
+          <img src="/assets/logo.png" alt="화홍고 로고" class="h-10 w-10 object-contain group-hover:scale-105 transition" />
           <div>
-            <div class="text-sm font-semibold text-slate-900 leading-none">School Suggestions</div>
-            <div class="text-xs text-slate-500 mt-1">학생 의견을 빠르게 전달하세요</div>
+            <div class="text-sm font-bold text-slate-900 leading-none">화홍고등학교 학생회</div>
+            <div class="text-xs text-blue-700 mt-0.5 font-medium">건의함</div>
           </div>
         </a>
-        <nav class="flex items-center gap-2">
-          <a href="/me.html" class="px-3 py-2 rounded-2xl text-sm text-slate-700 hover:bg-slate-100 transition">내 건의</a>
-          <a href="/admin/login.html" class="px-3 py-2 rounded-2xl text-sm text-slate-700 hover:bg-slate-100 transition">관리자</a>
+        <nav class="flex items-center gap-1">
+          <a href="/me.html" class="px-3 py-2 rounded-xl text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition font-medium">내 건의</a>
+          <a href="/admin/login.html" class="px-3 py-2 rounded-xl text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition font-medium">관리자</a>
         </nav>
       </div>
     </header>
 
-    <main class="max-w-5xl mx-auto px-4 py-10">
+    <!-- 히어로 배너 -->
+    <div class="hero-bg text-white py-10 px-4">
+      <div class="max-w-5xl mx-auto flex items-center gap-6">
+        <img src="/assets/logo.png" alt="화홍고 로고" class="h-16 w-16 object-contain opacity-90 hidden sm:block" />
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold tracking-tight">학생 건의함</h1>
+          <p class="text-blue-100 mt-1 text-sm md:text-base">화홍고등학교 학생회에 의견을 전달하세요. 익명으로 작성할 수 있어요.</p>
+        </div>
+      </div>
+    </div>
+
+    <main class="max-w-5xl mx-auto px-4 py-8">
       <section class="float-in">
-        <div class="flex items-end justify-between gap-6 flex-wrap">
-          <div>
-            <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">건의 작성</h1>
-            <p class="text-slate-600 mt-2">익명 식별 키로 "내 건의"를 관리할 수 있어요.</p>
+
+        <!-- 식별키 표시 -->
+        <div class="mb-6 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 px-5 py-3 flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500">내 식별키</span>
+            <span id="studentKey" class="text-xs font-mono text-slate-700 select-all bg-slate-50 px-2 py-1 rounded-lg"></span>
           </div>
-          <div class="rounded-2xl bg-white shadow-md ring-1 ring-slate-200 px-4 py-3">
-            <div class="text-xs text-slate-500">내 식별키</div>
-            <div id="studentKey" class="text-sm font-mono text-slate-800 mt-1 select-all"></div>
-          </div>
+          <span class="text-xs text-slate-400">이 키로 내 건의를 확인할 수 있어요</span>
         </div>
 
-        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- 건의 작성 폼 -->
           <div class="md:col-span-2 rounded-3xl bg-white shadow-md ring-1 ring-slate-200 overflow-hidden">
-            <div class="px-6 py-5 border-b border-slate-100">
-              <div class="text-sm font-semibold text-slate-900">새 건의</div>
-              <div class="text-xs text-slate-500 mt-1">학년 선택 후 제목/내용을 작성해 주세요.</div>
+            <div class="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white">
+              <div class="text-sm font-bold text-slate-900">새 건의 작성</div>
+              <div class="text-xs text-slate-500 mt-1">학년 선택 후 제목과 내용을 작성해 주세요.</div>
             </div>
 
-            <form id="form" class="px-6 py-6 space-y-6">
+            <form id="form" class="px-6 py-6 space-y-5">
               <div>
-                <div class="text-sm font-medium text-slate-800">학년</div>
-                <div class="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-2" id="gradeGrid"></div>
+                <div class="text-sm font-semibold text-slate-800 mb-3">학년</div>
+                <div class="grid grid-cols-3 gap-2" id="gradeGrid"></div>
                 <input type="hidden" id="grade" value="1" />
               </div>
 
               <div>
-                <label class="text-sm font-medium text-slate-800" for="title">제목</label>
+                <label class="text-sm font-semibold text-slate-800" for="title">제목</label>
                 <input id="title" required minlength="2" maxlength="140"
-                  class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200/60"
+                  class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-300 transition"
                   placeholder="예) 급식 메뉴 개선 요청" />
               </div>
 
               <div>
-                <label class="text-sm font-medium text-slate-800" for="content">내용</label>
+                <label class="text-sm font-semibold text-slate-800" for="content">내용</label>
                 <textarea id="content" required minlength="5" maxlength="10000" rows="7"
-                  class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200/60"
+                  class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-300 transition"
                   placeholder="불편했던 점, 개선 아이디어, 기대 효과 등을 자유롭게 적어주세요."></textarea>
+                <div class="text-xs text-slate-400 mt-1.5">구체적으로 적을수록 답변이 빨라져요.</div>
               </div>
 
-              <div class="flex items-center justify-between gap-4 flex-wrap">
-                <a href="/me.html" class="text-sm text-slate-600 hover:text-slate-900 transition">내가 쓴 건의 보기 →</a>
+              <div class="flex items-center justify-between gap-4 flex-wrap pt-1">
+                <a href="/me.html" class="text-sm text-blue-600 hover:text-blue-800 transition font-medium">내가 쓴 건의 보기 →</a>
                 <button id="submitBtn" type="submit"
-                  class="inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-slate-900 text-white text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-200">
+                  class="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-200">
                   제출하기
                 </button>
               </div>
             </form>
           </div>
 
-          <aside class="space-y-6">
+          <!-- 사이드바 -->
+          <aside class="space-y-5">
             <div class="rounded-3xl bg-white shadow-md ring-1 ring-slate-200 p-6">
-              <div class="text-sm font-semibold text-slate-900">알림 설정</div>
-              <p class="text-sm text-slate-600 mt-2">답변이 달리면 바로 알려드릴게요! 브라우저를 닫아도 알림이 옵니다.</p>
+              <div class="text-sm font-bold text-slate-900">📣 답변 알림</div>
+              <p class="text-sm text-slate-600 mt-2 leading-relaxed">답변이 달리면 브라우저 알림으로 알려드려요.</p>
               <button id="notifyBtn"
-                class="mt-4 w-full px-4 py-3 rounded-2xl bg-slate-900 text-white text-sm font-semibold shadow-sm hover:shadow-md transition">
+                class="mt-4 w-full px-4 py-3 rounded-2xl bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold shadow-sm hover:shadow-md transition">
                 알림 설정하기
               </button>
-              <div id="notifyState" class="text-xs text-slate-500 mt-3"></div>
+              <div id="notifyState" class="text-xs text-slate-400 mt-3"></div>
             </div>
 
-            <div class="rounded-3xl bg-slate-900 text-white shadow-md p-6">
-              <div class="text-sm font-semibold">운영 원칙</div>
-              <ul class="mt-3 text-sm text-white/80 space-y-2">
-                <li>• 욕설/비방/개인정보는 삭제될 수 있어요.</li>
-                <li>• 답변은 보통 영업일 기준 1~3일 내 제공돼요.</li>
-                <li>• 좋은 제안은 실제 반영됩니다.</li>
+            <div class="rounded-3xl bg-blue-800 text-white shadow-md p-6">
+              <div class="text-sm font-bold flex items-center gap-2">
+                <img src="/assets/logo.png" alt="" class="h-5 w-5 object-contain opacity-80" />
+                화홍고 학생회 운영 원칙
+              </div>
+              <ul class="mt-3 text-sm text-blue-100 space-y-2 leading-relaxed">
+                <li>• 욕설·비방·개인정보는 삭제될 수 있어요.</li>
+                <li>• 답변은 영업일 기준 1~3일 내 제공돼요.</li>
+                <li>• 좋은 제안은 실제로 반영됩니다!</li>
               </ul>
             </div>
           </aside>
         </div>
       </section>
     </main>
+
+    <footer class="mt-12 py-6 border-t border-slate-200 text-center text-xs text-slate-400">
+      © 화홍고등학교 학생회 · 건의함
+    </footer>
 
     <script src="/assets/app.js"></script>
     <script>
@@ -123,90 +165,58 @@
 
       studentKeyEl.textContent = App.getStudentKey();
 
-      // VAPID Public Key (백엔드 .env 와 동일해야 함)
       const VAPID_PUBLIC_KEY = 'BJpbfzPQdhyWeK9lv9Rs6S3bdqYZpgAUqTuw6j0-ME2sxXWM8THv4d1ZCow2BtjPoULAqJb5yy86mPkXly0Fqpc';
 
-      // Service Worker 등록 (Push는 나중에)
       let swRegistration = null;
       let isPushSubscribed = false;
-      
+
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')
           .then((reg) => {
             swRegistration = reg;
-            console.log('Service Worker 등록됨');
-            
-            // 기존 Push 구독 확인
             reg.pushManager.getSubscription().then((sub) => {
-              if (sub) {
-                isPushSubscribed = true;
-                updateNotifyState();
-              }
+              if (sub) { isPushSubscribed = true; updateNotifyState(); }
             });
           })
           .catch((err) => console.log('SW 등록 실패:', err));
       }
 
-      // 알림 설정 함수
       async function setupPushNotification() {
-        if (!swRegistration) {
-          App.toast('브라우저가 푸시 알림을 지원하지 않습니다.', 'error');
-          return false;
-        }
-        
-        // 권한 요청
+        if (!swRegistration) { App.toast('브라우저가 푸시 알림을 지원하지 않습니다.', 'error'); return false; }
         const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-          App.toast('알림 권한이 필요합니다.', 'error');
-          return false;
-        }
-        
+        if (permission !== 'granted') { App.toast('알림 권한이 필요합니다.', 'error'); return false; }
         try {
-          // 구독 생성
           const sub = await swRegistration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
           });
-          
-          // 서버에 저장
           await App.apiFetch('/push/subscribe', {
             method: 'POST',
-            body: {
-              endpoint: sub.endpoint,
-              p256dh: arrayBufferToBase64Url(sub.getKey('p256dh')),
-              auth: arrayBufferToBase64Url(sub.getKey('auth'))
-            }
+            body: { endpoint: sub.endpoint, p256dh: arrayBufferToBase64Url(sub.getKey('p256dh')), auth: arrayBufferToBase64Url(sub.getKey('auth')) }
           });
-          
           isPushSubscribed = true;
           updateNotifyState();
           App.toast('알림 설정 완료! 답변이 오면 알려드릴게요.', 'success');
           return true;
         } catch (e) {
-          console.log('Push 구독 실패:', e);
           App.toast('알림 설정에 실패했습니다.', 'error');
           return false;
         }
       }
 
-      // Uint8Array 변환 유틸
       function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
         const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
         const rawData = window.atob(base64);
         const outputArray = new Uint8Array(rawData.length);
-        for (let i = 0; i < rawData.length; ++i) {
-          outputArray[i] = rawData.charCodeAt(i);
-        }
+        for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
         return outputArray;
       }
 
       function arrayBufferToBase64Url(buffer) {
         const bytes = new Uint8Array(buffer);
         let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
-          binary += String.fromCharCode(bytes[i]);
-        }
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
         return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
       }
 
@@ -216,11 +226,8 @@
           const active = g === selected;
           const btn = App.el('button', {
             type: 'button',
-            class: `px-3 py-3 rounded-2xl text-sm font-semibold ring-1 transition shadow-sm hover:shadow-md hover:-translate-y-0.5 ${active ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'}`,
-            onclick: () => {
-              gradeInput.value = String(g);
-              renderGrades(g);
-            }
+            class: `px-3 py-3 rounded-2xl text-sm font-bold ring-1 transition shadow-sm hover:shadow-md hover:-translate-y-0.5 ${active ? 'bg-blue-700 text-white ring-blue-700' : 'bg-white text-slate-700 ring-slate-200 hover:bg-blue-50 hover:ring-blue-200'}`,
+            onclick: () => { gradeInput.value = String(g); renderGrades(g); }
           }, [`${g}학년`]);
           gradeGrid.appendChild(btn);
         }
@@ -230,11 +237,11 @@
       function updateNotifyState() {
         const p = Notification.permission;
         if (p === 'granted' && isPushSubscribed) {
-          notifyState.textContent = '알림이 활성화되었습니다. 답변이 오면 바로 알려드릴게요!';
-          notifyBtn.textContent = '알림 설정 완료';
+          notifyState.textContent = '알림이 활성화되었습니다!';
+          notifyBtn.textContent = '알림 설정 완료 ✓';
           notifyBtn.classList.add('opacity-60', 'cursor-not-allowed');
         } else if (p === 'denied') {
-          notifyState.textContent = '브라우저에서 알림이 차단되어 있어요. 설정에서 허용해 주세요.';
+          notifyState.textContent = '브라우저에서 알림이 차단되어 있어요.';
           notifyBtn.textContent = '알림 차단됨';
         } else {
           notifyState.textContent = '답변이 오면 알림을 받아보세요!';
@@ -242,12 +249,9 @@
         }
       }
       updateNotifyState();
-      
+
       notifyBtn.addEventListener('click', async () => {
-        if (Notification.permission === 'granted' && isPushSubscribed) {
-          App.toast('이미 알림이 설정되어 있습니다.', 'info');
-          return;
-        }
+        if (Notification.permission === 'granted' && isPushSubscribed) { App.toast('이미 알림이 설정되어 있습니다.', 'info'); return; }
         await setupPushNotification();
       });
 
@@ -256,58 +260,34 @@
         const submitBtn = document.getElementById('submitBtn');
         submitBtn.disabled = true;
         submitBtn.classList.add('opacity-60');
-
         const payload = {
           grade: Number(document.getElementById('grade').value),
           title: document.getElementById('title').value,
           content: document.getElementById('content').value,
         };
-
         try {
           await App.apiFetch('/suggestions', { method: 'POST', body: payload });
           document.getElementById('title').value = '';
           document.getElementById('content').value = '';
-          
-          // 알림 설정 유도 (커스텀 모달로만)
           if (Notification.permission !== 'granted' || !isPushSubscribed) {
-            // 알림 설정 모달
             const overlay = App.el('div', { class: 'fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4' });
-            const card = App.el('div', { class: 'w-full max-w-md rounded-3xl bg-white shadow-xl ring-1 ring-slate-200 overflow-hidden animate-[pop_.18s_ease-out]' });
-            
-            const head = App.el('div', { class: 'px-6 py-5 border-b border-slate-100' }, [
-              App.el('div', { class: 'text-base font-semibold text-slate-900' }, ['제출 완료']),
+            const card = App.el('div', { class: 'w-full max-w-md rounded-3xl bg-white shadow-xl ring-1 ring-slate-200 overflow-hidden' });
+            const head = App.el('div', { class: 'px-6 py-5 border-b border-slate-100 bg-blue-50' }, [
+              App.el('div', { class: 'text-base font-bold text-slate-900' }, ['✅ 제출 완료']),
               App.el('div', { class: 'text-sm text-slate-500 mt-1' }, ['건의가 정상적으로 등록되었습니다!']),
             ]);
-            
-            const body = App.el('div', { class: 'px-6 py-5 text-sm text-slate-700 leading-relaxed' }, [
-              '"내 건의" 페이지에서 진행 상태와 답변을 확인할 수 있어요.\n\n답변이 오면 바로 알려드릴까요?'
-            ]);
-            
+            const body = App.el('div', { class: 'px-6 py-5 text-sm text-slate-700 leading-relaxed' }, ['"내 건의" 페이지에서 진행 상태와 답변을 확인할 수 있어요.\n\n답변이 오면 바로 알려드릴까요?']);
             const foot = App.el('div', { class: 'px-6 py-5 bg-slate-50 flex items-center justify-end gap-2' });
-            
-            const cancelBtn = App.el('button', {
-              class: 'px-4 py-2 rounded-2xl bg-white ring-1 ring-slate-200 text-sm font-semibold hover:bg-slate-50 transition'
-            }, ['취소']);
-            
-            const confirmBtn = App.el('button', {
-              class: 'px-4 py-2 rounded-2xl bg-slate-900 text-white text-sm font-semibold shadow-sm hover:shadow-md transition'
-            }, ['확인']);
-            
+            const cancelBtn = App.el('button', { class: 'px-4 py-2 rounded-2xl bg-white ring-1 ring-slate-200 text-sm font-semibold hover:bg-slate-50 transition' }, ['나중에']);
+            const confirmBtn = App.el('button', { class: 'px-4 py-2 rounded-2xl bg-blue-700 text-white text-sm font-bold shadow-sm hover:bg-blue-800 transition' }, ['알림 설정']);
             cancelBtn.addEventListener('click', () => overlay.remove());
-            confirmBtn.addEventListener('click', () => {
-              overlay.remove();
-              setupPushNotification();
-            });
-            
+            confirmBtn.addEventListener('click', () => { overlay.remove(); setupPushNotification(); });
             foot.append(cancelBtn, confirmBtn);
             card.append(head, body, foot);
             overlay.append(card);
             document.body.append(overlay);
           } else {
-            App.openModal({
-              title: '제출 완료',
-              message: '건의가 정상적으로 등록되었습니다!\n\n답변이 오면 바로 알려드릴게요.',
-            });
+            App.openModal({ title: '✅ 제출 완료', message: '건의가 정상적으로 등록되었습니다!\n\n답변이 오면 바로 알려드릴게요.' });
           }
         } catch (err) {
           App.toast(err.message || '제출 실패', 'error');
