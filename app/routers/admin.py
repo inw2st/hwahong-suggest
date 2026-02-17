@@ -221,3 +221,17 @@ def admin_answer_suggestion(
         send_push_notifications(s.student_key, s.title)
     
     return s
+
+
+@router.delete("/suggestions/{suggestion_id}", status_code=204)
+def admin_delete_suggestion(
+    suggestion_id: int,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """건의를 DB에서 완전히 삭제합니다."""
+    s = db.query(Suggestion).filter(Suggestion.id == suggestion_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    db.delete(s)
+    db.commit()
