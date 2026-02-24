@@ -13,9 +13,9 @@ html, body {
 body {
   color: var(--ink);
   background:
-    radial-gradient(1200px 700px at 10% -10%, rgba(99,102,241,0.12), transparent 60%),
-    radial-gradient(900px 600px at 100% 0%, rgba(14,165,233,0.10), transparent 55%),
-    radial-gradient(1000px 700px at 80% 120%, rgba(16,185,129,0.10), transparent 55%),
+    radial-gradient(1200px 700px at 10% -10%, rgba(99,102,241,0.10) 0%, rgba(99,102,241,0.06) 45%, transparent 72%),
+    radial-gradient(900px 600px at 100% 0%, rgba(14,165,233,0.09) 0%, rgba(14,165,233,0.05) 42%, transparent 72%),
+    radial-gradient(1000px 700px at 80% 120%, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.04) 42%, transparent 74%),
     linear-gradient(180deg, var(--bg0), #ffffff);
 }
 
