@@ -103,8 +103,10 @@
 
       let swRegistration = null;
       let isPushSubscribed = false;
+      const canUseNotifications = App.supportsNotifications();
+      const canUsePush = App.supportsPushNotifications();
 
-      if ('serviceWorker' in navigator) {
+      if (canUsePush) {
         navigator.serviceWorker.register('/sw.js')
           .then((reg) => {
             swRegistration = reg;
@@ -132,7 +134,7 @@
       }
 
       async function setupAdminPush() {
-        if (!swRegistration) { App.toast('푸시 알림을 지원하지 않는 브라우저예요.', 'error'); return; }
+        if (!canUsePush || !swRegistration) { App.toast('푸시 알림을 지원하지 않는 브라우저예요.', 'error'); return; }
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') { App.toast('알림 권한이 필요합니다.', 'error'); return; }
         try {
@@ -154,7 +156,11 @@
 
       function updateAdminNotifyButton() {
         const btn = document.getElementById('adminNotifyBtn');
-        if (isPushSubscribed) {
+        if (!canUseNotifications) {
+          btn.textContent = '알림 미지원';
+          btn.disabled = true;
+          btn.classList.add('opacity-60', 'cursor-not-allowed');
+        } else if (isPushSubscribed) {
           btn.textContent = '🔔 알림 설정 완료 ✓';
           btn.classList.add('opacity-60', 'cursor-not-allowed');
         } else {
@@ -163,6 +169,7 @@
       }
 
       document.getElementById('adminNotifyBtn').addEventListener('click', () => {
+        if (!canUseNotifications) { App.toast('이 브라우저에서는 알림을 지원하지 않습니다.', 'info'); return; }
         if (isPushSubscribed) { App.toast('이미 알림이 설정되어 있습니다.', 'info'); return; }
         setupAdminPush();
       });
@@ -333,6 +340,7 @@
       })();
 
       renderGradeFilters();
+      updateAdminNotifyButton();
       load();
     </script>
   </body>

@@ -180,8 +180,10 @@
 
       let swRegistration = null;
       let isPushSubscribed = false;
+      const canUseNotifications = App.supportsNotifications();
+      const canUsePush = App.supportsPushNotifications();
 
-      if ('serviceWorker' in navigator) {
+      if (canUsePush) {
         navigator.serviceWorker.register('/sw.js')
           .then((reg) => {
             swRegistration = reg;
@@ -193,7 +195,7 @@
       }
 
       async function setupPushNotification() {
-        if (!swRegistration) { App.toast('브라우저가 푸시 알림을 지원하지 않습니다.', 'error'); return false; }
+        if (!canUsePush || !swRegistration) { App.toast('이 브라우저에서는 알림을 지원하지 않습니다.', 'error'); return false; }
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') { App.toast('알림 권한이 필요합니다.', 'error'); return false; }
         try {
@@ -246,6 +248,13 @@
       renderGrades(1);
 
       function updateNotifyState() {
+        if (!canUseNotifications) {
+          notifyState.textContent = '이 브라우저에서는 알림을 지원하지 않아요.';
+          notifyBtn.textContent = '알림 미지원';
+          notifyBtn.disabled = true;
+          notifyBtn.classList.add('opacity-60', 'cursor-not-allowed');
+          return;
+        }
         const p = Notification.permission;
         if (p === 'granted' && isPushSubscribed) {
           notifyState.textContent = '알림이 활성화되었습니다!';
@@ -262,6 +271,7 @@
       updateNotifyState();
 
       notifyBtn.addEventListener('click', async () => {
+        if (!canUseNotifications) { App.toast('이 브라우저에서는 알림을 지원하지 않습니다.', 'info'); return; }
         if (Notification.permission === 'granted' && isPushSubscribed) { App.toast('이미 알림이 설정되어 있습니다.', 'info'); return; }
         await setupPushNotification();
       });
@@ -280,20 +290,26 @@
           await App.apiFetch('/suggestions', { method: 'POST', body: payload });
           document.getElementById('title').value = '';
           document.getElementById('content').value = '';
-          if (Notification.permission !== 'granted' || !isPushSubscribed) {
+          if (!canUseNotifications || Notification.permission !== 'granted' || !isPushSubscribed) {
             const overlay = App.el('div', { class: 'fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4' });
             const card = App.el('div', { class: 'w-full max-w-md rounded-3xl bg-white shadow-xl ring-1 ring-slate-200 overflow-hidden' });
             const head = App.el('div', { class: 'px-6 py-5 border-b border-slate-100 bg-blue-50' }, [
               App.el('div', { class: 'text-base font-bold text-slate-900' }, ['✅ 제출 완료']),
               App.el('div', { class: 'text-sm text-slate-500 mt-1' }, ['건의가 정상적으로 등록되었습니다!']),
             ]);
-            const body = App.el('div', { class: 'px-6 py-5 text-sm text-slate-700 leading-relaxed' }, ['"내 건의" 페이지에서 진행 상태와 답변을 확인할 수 있어요.\n\n답변이 오면 바로 알려드릴까요?']);
+            const bodyMessage = canUseNotifications
+              ? '"내 건의" 페이지에서 진행 상태와 답변을 확인할 수 있어요.\n\n답변이 오면 바로 알려드릴까요?'
+              : '"내 건의" 페이지에서 진행 상태와 답변을 확인할 수 있어요.';
+            const body = App.el('div', { class: 'px-6 py-5 text-sm text-slate-700 leading-relaxed' }, [bodyMessage]);
             const foot = App.el('div', { class: 'px-6 py-5 bg-slate-50 flex items-center justify-end gap-2' });
             const cancelBtn = App.el('button', { class: 'px-4 py-2 rounded-2xl bg-white ring-1 ring-slate-200 text-sm font-semibold hover:bg-slate-50 transition' }, ['나중에']);
-            const confirmBtn = App.el('button', { class: 'px-4 py-2 rounded-2xl bg-blue-700 text-white text-sm font-bold shadow-sm hover:bg-blue-800 transition' }, ['알림 설정']);
             cancelBtn.addEventListener('click', () => overlay.remove());
-            confirmBtn.addEventListener('click', () => { overlay.remove(); setupPushNotification(); });
-            foot.append(cancelBtn, confirmBtn);
+            foot.append(cancelBtn);
+            if (canUseNotifications) {
+              const confirmBtn = App.el('button', { class: 'px-4 py-2 rounded-2xl bg-blue-700 text-white text-sm font-bold shadow-sm hover:bg-blue-800 transition' }, ['알림 설정']);
+              confirmBtn.addEventListener('click', () => { overlay.remove(); setupPushNotification(); });
+              foot.append(confirmBtn);
+            }
             card.append(head, body, foot);
             overlay.append(card);
             document.body.append(overlay);

@@ -88,8 +88,10 @@
 
       let swRegistration = null;
       let pushSubscription = null;
+      const canUseNotifications = App.supportsNotifications();
+      const canUsePush = App.supportsPushNotifications();
 
-      if ('serviceWorker' in navigator) {
+      if (canUsePush) {
         navigator.serviceWorker.register('/sw.js')
           .then((reg) => {
             swRegistration = reg;
@@ -99,7 +101,7 @@
       }
 
       async function subscribeToPush() {
-        if (!swRegistration) return null;
+        if (!canUsePush || !swRegistration) return null;
         try {
           const sub = await swRegistration.pushManager.subscribe({
             userVisibleOnly: true,
@@ -134,7 +136,7 @@
         if (swRegistration) {
           try { await swRegistration.showNotification(title, { body, icon: '/assets/logo.png', tag: tag || 'suggestion', requireInteraction: true }); return; } catch (e) {}
         }
-        if (Notification.permission === 'granted') {
+        if (canUseNotifications && Notification.permission === 'granted') {
           try { new Notification(title, { body, icon: '/assets/logo.png', tag }); } catch (e) {}
         }
       }
@@ -264,7 +266,7 @@
       }
 
       async function pollNewAnswers() {
-        if (Notification.permission !== 'granted') return;
+        if (!canUseNotifications || Notification.permission !== 'granted') return;
         try {
           const items = await App.apiFetch('/me/suggestions');
           const lastWatermark = localStorage.getItem('last_answered_at');
@@ -284,6 +286,7 @@
 
       document.getElementById('refreshBtn').addEventListener('click', load);
       document.getElementById('testNotifyBtn').addEventListener('click', async () => {
+        if (!canUseNotifications) { App.toast('이 브라우저에서는 알림을 지원하지 않습니다.', 'info'); return; }
         if (Notification.permission !== 'granted') await Notification.requestPermission();
         await showNotification('테스트 알림', '알림 테스트입니다!', 'test');
         App.toast('알림을 띄웠습니다!', 'success');
@@ -293,6 +296,7 @@
         App.toast('워터마크가 초기화되었습니다.', 'success');
       });
       document.getElementById('notifyBtn').addEventListener('click', async () => {
+        if (!canUseNotifications) { App.toast('이 브라우저에서는 알림을 지원하지 않습니다.', 'info'); return; }
         const p = await Notification.requestPermission();
         if (p !== 'granted') { App.toast('알림이 허용되지 않았습니다.', 'error'); return; }
         await subscribeToPush();
@@ -312,6 +316,13 @@
       load();
       setInterval(pollNewAnswers, 5000);
       pollNewAnswers();
+
+      if (!canUseNotifications) {
+        const notifyBtn = document.getElementById('notifyBtn');
+        notifyBtn.textContent = '알림 미지원';
+        notifyBtn.disabled = true;
+        notifyBtn.classList.add('opacity-60', 'cursor-not-allowed');
+      }
     </script>
   </body>
 </html>

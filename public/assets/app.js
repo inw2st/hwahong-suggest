@@ -21,6 +21,19 @@
     return newKey;
   }
 
+  function supportsNotifications() {
+    return typeof window !== 'undefined' && 'Notification' in window;
+  }
+
+  function supportsPushNotifications() {
+    return (
+      typeof navigator !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      'PushManager' in window &&
+      supportsNotifications()
+    );
+  }
+
   async function apiFetch(path, { method = 'GET', headers = {}, body } = {}) {
     const url = API_BASE + path;
     const finalHeaders = {
@@ -128,6 +141,8 @@
     API_BASE,
     apiFetch,
     getStudentKey,
+    supportsNotifications,
+    supportsPushNotifications,
     toast,
     openModal,
     el,
