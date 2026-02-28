@@ -36,6 +36,7 @@ class Suggestion(Base):
 
     answer: Mapped[str | None] = mapped_column(Text, nullable=True)
     answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notification_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

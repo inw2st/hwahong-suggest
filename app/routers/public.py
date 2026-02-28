@@ -5,12 +5,13 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.email import is_email_delivery_configured
 from app.db.session import get_db, SessionLocal
 from app.deps import require_student_key
 from app.models.push import PushSubscription
 from app.models.suggestion import Suggestion
 from app.routers.admin import send_push_notification_to_subscription
-from app.schemas.suggestion import SuggestionCreateIn, SuggestionOut, SuggestionUpdateIn
+from app.schemas.suggestion import SuggestionCreateIn, SuggestionNotificationEmailIn, SuggestionOut, SuggestionUpdateIn
 
 
 router = APIRouter(prefix="/api", tags=["public"])
@@ -97,6 +98,29 @@ def update_my_suggestion(
     if body.content is not None:
         s.content = body.content.strip()
 
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    return s
+
+
+@router.patch("/me/suggestions/{suggestion_id}/notification-email", response_model=SuggestionOut)
+def set_notification_email(
+    suggestion_id: int,
+    body: SuggestionNotificationEmailIn,
+    student_key: str = Depends(require_student_key),
+    db: Session = Depends(get_db),
+):
+    if not is_email_delivery_configured():
+        raise HTTPException(status_code=503, detail="Email notifications are not configured")
+
+    s = db.query(Suggestion).filter(Suggestion.id == suggestion_id, Suggestion.student_key == student_key).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    if s.status != "pending":
+        raise HTTPException(status_code=409, detail="Answered suggestions cannot be updated")
+
+    s.notification_email = body.email
     db.add(s)
     db.commit()
     db.refresh(s)

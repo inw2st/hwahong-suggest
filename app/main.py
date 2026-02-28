@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from sqlalchemy import inspect, text
 
 from app.core.config import settings
 from app.db.base import Base
@@ -35,10 +36,19 @@ if origins:
     )
 
 
+def _ensure_runtime_schema_updates():
+    with engine.begin() as conn:
+        inspector = inspect(conn)
+        columns = {column["name"] for column in inspector.get_columns("suggestions")}
+        if "notification_email" not in columns:
+            conn.execute(text("ALTER TABLE suggestions ADD COLUMN notification_email VARCHAR(320)"))
+
+
 @app.on_event("startup")
 def on_startup():
     if settings.AUTO_CREATE_TABLES:
         Base.metadata.create_all(bind=engine)
+        _ensure_runtime_schema_updates()
 
 
 app.include_router(public_router)

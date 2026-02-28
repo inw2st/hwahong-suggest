@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     VAPID_PUBLIC_KEY: str = ""
     VAPID_PRIVATE_KEY: str = ""
 
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_FROM_NAME: str = "화홍고 학생회 건의함"
+    SMTP_USE_TLS: bool = True
+    SMTP_USE_SSL: bool = False
+
     AUTO_CREATE_TABLES: bool = True
 
 

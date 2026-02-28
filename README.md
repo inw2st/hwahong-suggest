@@ -10,6 +10,7 @@
 - Auth: JWT + bcrypt
 - Frontend: 정적 HTML/CSS/Vanilla JS (Tailwind CDN)
 - Notification: Web Push (VAPID)
+- Optional email notifications: SMTP
 - Infra: Nginx + systemd (배포 스크립트 제공)
 
 ## 핵심 기능
@@ -81,6 +82,14 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=720
 CORS_ORIGINS=https://your-domain.com
 VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM_EMAIL=
+SMTP_FROM_NAME=화홍고 학생회 건의함
+SMTP_USE_TLS=true
+SMTP_USE_SSL=false
 AUTO_CREATE_TABLES=true
 ```
 
@@ -89,6 +98,7 @@ AUTO_CREATE_TABLES=true
 - `JWT_SECRET_KEY`: JWT 서명 키
 - `CORS_ORIGINS`: 허용할 Origin(쉼표로 다중 지정)
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: Web Push 전송용 키
+- `SMTP_*`: 답변 이메일 알림 전송용 SMTP 설정
 - `AUTO_CREATE_TABLES`: 앱 시작 시 테이블 자동 생성 여부
 
 ## 데이터 모델
@@ -100,6 +110,7 @@ AUTO_CREATE_TABLES=true
 - `title`, `content`
 - `status` (`pending` | `answered`)
 - `answer`, `answered_at`
+- `notification_email` (선택 입력)
 - `created_at`, `updated_at`
 
 ### `admins`
@@ -121,6 +132,7 @@ AUTO_CREATE_TABLES=true
 - `POST /suggestions`
 - `GET /me/suggestions`
 - `PATCH /me/suggestions/{suggestion_id}`
+- `PATCH /me/suggestions/{suggestion_id}/notification-email`
 - `DELETE /me/suggestions/{suggestion_id}`
 
 학생 API는 `X-Student-Key` 헤더를 사용합니다.

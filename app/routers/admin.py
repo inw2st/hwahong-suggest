@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.email import send_email
 from app.core.security import create_access_token, verify_password
 from app.db.session import get_db
 from app.deps import get_current_admin
@@ -158,6 +159,18 @@ def send_push_notifications(student_key: str, suggestion_title: str):
         )
 
 
+def send_answer_email(notification_email: str, suggestion_title: str, answer: str) -> bool:
+    body = (
+        "안녕하세요.\n\n"
+        "등록하신 건의사항에 답변이 도착했습니다.\n\n"
+        f"건의 제목: {suggestion_title}\n\n"
+        "답변 내용:\n"
+        f"{answer}\n\n"
+        "사이트의 '내 건의' 페이지에서도 답변을 확인할 수 있습니다."
+    )
+    return send_email(notification_email, "[화홍고 학생회] 건의사항 답변이 도착했습니다", body)
+
+
 @router.post("/login", response_model=TokenOut)
 def admin_login(body: AdminLoginIn, db: Session = Depends(get_db)):
     admin = db.query(Admin).filter(Admin.username == body.username).first()
@@ -219,6 +232,8 @@ def admin_answer_suggestion(
     # Send push notification if this is a new answer
     if old_status != "answered":
         send_push_notifications(s.student_key, s.title)
+        if s.notification_email:
+            send_answer_email(s.notification_email, s.title, s.answer or "")
     
     return s
 
