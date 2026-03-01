@@ -221,7 +221,6 @@ def send_answer_email(
                           <td style="padding-left: 14px; vertical-align: middle; color: #ffffff;">
                             <div style="font-size: 14px; font-weight: 700; opacity: 0.92;">화홍고등학교 학생회</div>
                             <div style="font-size: 26px; font-weight: 800; line-height: 1.25; margin-top: 6px;">건의 답변이 도착했어요</div>
-                            <div style="font-size: 14px; line-height: 1.5; color: #dbeafe; margin-top: 8px;">사이트와 같은 톤으로 바로 확인할 수 있게 준비해 두었습니다.</div>
                           </td>
                         </tr>
                       </table>
