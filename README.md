@@ -80,6 +80,7 @@ DATABASE_URL=postgresql://user:password@db-host:5432/suggestions
 JWT_SECRET_KEY=change-me-to-a-long-random-string
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=720
 CORS_ORIGINS=https://your-domain.com
+PUBLIC_BASE_URL=https://your-domain.com
 VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 SMTP_HOST=
@@ -88,6 +89,7 @@ SMTP_USERNAME=
 SMTP_PASSWORD=
 SMTP_FROM_EMAIL=
 SMTP_FROM_NAME=화홍고 학생회 건의함
+SMTP_REPLY_TO_EMAIL=
 SMTP_USE_TLS=true
 SMTP_USE_SSL=false
 AUTO_CREATE_TABLES=true
@@ -97,6 +99,7 @@ AUTO_CREATE_TABLES=true
 - `DATABASE_URL`: PostgreSQL 연결 문자열
 - `JWT_SECRET_KEY`: JWT 서명 키
 - `CORS_ORIGINS`: 허용할 Origin(쉼표로 다중 지정)
+- `PUBLIC_BASE_URL`: 이메일/외부 링크 생성에 사용할 공개 사이트 주소
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: Web Push 전송용 키
 - `SMTP_*`: 답변 이메일 알림 전송용 SMTP 설정
 - `AUTO_CREATE_TABLES`: 앱 시작 시 테이블 자동 생성 여부

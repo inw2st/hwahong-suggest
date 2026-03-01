@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import base64
+import html
 import json
 import logging
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict
+from urllib.parse import urlencode
 
 import jwt
 import requests
@@ -159,16 +161,63 @@ def send_push_notifications(student_key: str, suggestion_title: str):
         )
 
 
-def send_answer_email(notification_email: str, suggestion_title: str, answer: str) -> bool:
+def _resolve_public_base_url() -> str:
+    base_url = settings.PUBLIC_BASE_URL.strip()
+    if base_url:
+        return base_url.rstrip("/")
+
+    origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
+    if origins:
+        return origins[0].rstrip("/")
+
+    return "http://localhost:8000"
+
+
+def send_answer_email(
+    notification_email: str,
+    student_key: str,
+    suggestion_id: int,
+    suggestion_title: str,
+    answer: str,
+) -> bool:
+    answer_link = _resolve_public_base_url() + "/me.html?" + urlencode({"sk": student_key, "sid": suggestion_id})
+    safe_title = html.escape(suggestion_title)
+    safe_answer = html.escape(answer).replace("\n", "<br />")
+    safe_link = html.escape(answer_link)
     body = (
         "안녕하세요.\n\n"
-        "등록하신 건의사항에 답변이 도착했습니다.\n\n"
+        "학생회에서 건의에 답변을 보냈어요.\n\n"
         f"건의 제목: {suggestion_title}\n\n"
         "답변 내용:\n"
         f"{answer}\n\n"
-        "사이트의 '내 건의' 페이지에서도 답변을 확인할 수 있습니다."
+        "답변 확인:\n"
+        f"{answer_link}\n\n"
+        "위 링크를 열면 바로 '내 건의' 페이지에서 답변을 확인할 수 있습니다."
     )
-    return send_email(notification_email, "[화홍고 학생회] 건의사항 답변이 도착했습니다", body)
+    html_body = f"""
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
+    <p>안녕하세요.</p>
+    <p>학생회에서 건의에 답변을 보냈어요.</p>
+    <p><strong>건의 제목:</strong> {safe_title}</p>
+    <p><strong>답변 내용:</strong><br />{safe_answer}</p>
+    <p>
+      <a href="{safe_link}" style="display: inline-block; padding: 12px 18px; border-radius: 12px; background: #1d4ed8; color: #ffffff; text-decoration: none; font-weight: 700;">
+        답변 확인하기
+      </a>
+    </p>
+    <p style="font-size: 14px; color: #475569;">버튼이 열리지 않으면 아래 주소를 복사해 열어 주세요.<br />{safe_link}</p>
+  </body>
+</html>
+""".strip()
+    reply_to = settings.SMTP_REPLY_TO_EMAIL.strip() or settings.SMTP_FROM_EMAIL
+    return send_email(
+        notification_email,
+        "학생회에서 건의에 답변을 보냈어요",
+        body,
+        html_body=html_body,
+        reply_to=reply_to,
+    )
 
 
 @router.post("/login", response_model=TokenOut)
@@ -233,7 +282,7 @@ def admin_answer_suggestion(
     if old_status != "answered":
         send_push_notifications(s.student_key, s.title)
         if s.notification_email:
-            send_answer_email(s.notification_email, s.title, s.answer or "")
+            send_answer_email(s.notification_email, s.student_key, s.id, s.title, s.answer or "")
     
     return s
 

@@ -14,7 +14,14 @@ def is_email_delivery_configured() -> bool:
     return bool(settings.SMTP_HOST and settings.SMTP_FROM_EMAIL)
 
 
-def send_email(to_email: str, subject: str, body: str) -> bool:
+def send_email(
+    to_email: str,
+    subject: str,
+    body: str,
+    *,
+    html_body: str | None = None,
+    reply_to: str | None = None,
+) -> bool:
     if not is_email_delivery_configured():
         logger.warning("SMTP is not configured, skipping email delivery")
         return False
@@ -27,7 +34,11 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
         else settings.SMTP_FROM_EMAIL
     )
     message["To"] = to_email
+    if reply_to:
+        message["Reply-To"] = reply_to
     message.set_content(body)
+    if html_body:
+        message.add_alternative(html_body, subtype="html")
 
     try:
         if settings.SMTP_USE_SSL:

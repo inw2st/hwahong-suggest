@@ -79,6 +79,12 @@
     <script>
       const listEl = document.getElementById('list');
       const studentKeyEl = document.getElementById('studentKey');
+      const searchParams = new URLSearchParams(location.search);
+      const linkedStudentKey = searchParams.get('sk');
+      const targetSuggestionId = Number(searchParams.get('sid') || '');
+      if (linkedStudentKey && linkedStudentKey.length > 10) {
+        localStorage.setItem('student_key', linkedStudentKey);
+      }
       studentKeyEl.textContent = App.getStudentKey();
 
       const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -153,6 +159,9 @@
 
       function card(s) {
         const wrap = App.el('div', { class: 'rounded-3xl bg-white shadow-md ring-1 ring-slate-200 overflow-hidden hover:shadow-lg transition duration-200' });
+        if (Number.isFinite(targetSuggestionId) && s.id === targetSuggestionId) {
+          wrap.classList.add('ring-2', 'ring-blue-400', 'shadow-blue-100');
+        }
         const head = App.el('div', { class: 'px-6 py-5 border-b border-slate-100 flex items-start justify-between gap-4' });
         const title = App.el('div', {}, [
           App.el('div', { class: 'text-xs text-slate-500' }, [`${s.grade}학년 · ${fmt(s.created_at)}`]),
@@ -205,6 +214,15 @@
           }
           listEl.innerHTML = '';
           items.forEach((s) => listEl.appendChild(card(s)));
+          if (Number.isFinite(targetSuggestionId)) {
+            const target = items.find((s) => s.id === targetSuggestionId);
+            if (target) {
+              requestAnimationFrame(() => {
+                const highlighted = listEl.querySelector('.ring-blue-400');
+                if (highlighted) highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              });
+            }
+          }
         } catch (err) {
           listEl.innerHTML = '';
           listEl.appendChild(App.el('div', { class: 'rounded-3xl bg-white shadow-md ring-1 ring-slate-200 p-6 text-sm text-slate-600' }, [err.message || 'API 오류']));

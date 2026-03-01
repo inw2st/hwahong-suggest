@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     # - http://localhost:3000
     # - https://your-app.vercel.app
     CORS_ORIGINS: str = ""
+    PUBLIC_BASE_URL: str = ""
 
     # VAPID Keys for Push API
     VAPID_PUBLIC_KEY: str = ""
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str = ""
     SMTP_FROM_NAME: str = "화홍고 학생회 건의함"
+    SMTP_REPLY_TO_EMAIL: str = ""
     SMTP_USE_TLS: bool = True
     SMTP_USE_SSL: bool = False
 
