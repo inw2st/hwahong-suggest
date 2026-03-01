@@ -173,6 +173,7 @@
       const studentKeyEl = document.getElementById('studentKey');
       const notifyBtn = document.getElementById('notifyBtn');
       const notifyState = document.getElementById('notifyState');
+      const savedNotificationEmailKey = 'saved_notification_email';
 
       studentKeyEl.textContent = App.getStudentKey();
 
@@ -231,6 +232,21 @@
         let binary = '';
         for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
         return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      }
+
+      function getSavedNotificationEmail() {
+        return localStorage.getItem(savedNotificationEmailKey) || '';
+      }
+
+      function saveNotificationEmail(email) {
+        localStorage.setItem(savedNotificationEmailKey, email.trim().toLowerCase());
+      }
+
+      function maskEmail(email) {
+        const [local, domain] = email.split('@');
+        if (!local || !domain) return email;
+        if (local.length <= 2) return `${local[0] || ''}*@${domain}`;
+        return `${local.slice(0, 2)}${'*'.repeat(Math.max(1, local.length - 2))}@${domain}`;
       }
 
       function renderGrades(selected) {
@@ -301,10 +317,29 @@
             body.appendChild(App.el('div', {}, ['"내 건의" 페이지에서 진행 상태와 답변을 확인할 수 있어요.']));
             let emailInput = null;
             if (!canUseNotifications) {
+              const savedNotificationEmail = getSavedNotificationEmail();
               body.appendChild(App.el('div', { class: 'rounded-2xl bg-slate-50 ring-1 ring-slate-200 p-4 space-y-3' }, [
                 App.el('div', { class: 'text-sm font-semibold text-slate-900' }, ['이 브라우저에서는 알림이 지원되지 않아요.']),
                 App.el('div', { class: 'text-xs text-slate-500' }, ['원하면 이메일 주소를 남기면 답변 등록 시 메일로 알려드릴게요.']),
               ]));
+              if (savedNotificationEmail) {
+                const savedEmailWrap = App.el('div', { class: 'rounded-2xl bg-white ring-1 ring-blue-100 p-3 flex items-center justify-between gap-3 flex-wrap' });
+                savedEmailWrap.append(
+                  App.el('div', { class: 'text-xs text-slate-500' }, ['이전에 사용한 이메일']),
+                  App.el('button', {
+                    type: 'button',
+                    class: 'px-3 py-2 rounded-2xl bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition',
+                  }, [`이전 이메일 사용 (${maskEmail(savedNotificationEmail)})`]),
+                );
+                body.appendChild(savedEmailWrap);
+                savedEmailWrap.querySelector('button').addEventListener('click', () => {
+                  if (emailInput) {
+                    emailInput.value = savedNotificationEmail;
+                    emailInput.focus();
+                    emailInput.setSelectionRange(emailInput.value.length, emailInput.value.length);
+                  }
+                });
+              }
               emailInput = App.el('input', {
                 type: 'email',
                 inputmode: 'email',
@@ -337,6 +372,7 @@
                     method: 'PATCH',
                     body: { email: emailInput.value.trim() }
                   });
+                  saveNotificationEmail(emailInput.value);
                   overlay.remove();
                   App.openModal({ title: '이메일 등록 완료', message: '답변이 등록되면 이메일로 알려드릴게요.' });
                 } catch (err) {
