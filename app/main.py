@@ -9,9 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy import inspect, text
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.db.base import Base
@@ -27,10 +24,6 @@ def _parse_origins(raw: str) -> list[str]:
 
 
 app = FastAPI(title="School Suggestions", version="1.0.0")
-
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 origins = _parse_origins(settings.CORS_ORIGINS)
 if origins:

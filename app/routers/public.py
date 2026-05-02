@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import time
 from datetime import datetime
+from collections import defaultdict
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from app.core.email import is_email_delivery_configured
 from app.db.session import get_db, SessionLocal
@@ -17,7 +17,17 @@ from app.schemas.suggestion import SuggestionCreateIn, SuggestionNotificationEma
 
 
 router = APIRouter(prefix="/api", tags=["public"])
-limiter = Limiter(key_func=get_remote_address)
+
+_rate_store: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(key: str, limit: int, window: int) -> None:
+    now = time.time()
+    bucket = _rate_store[key]
+    bucket[:] = [t for t in bucket if now - t < window]
+    if len(bucket) >= limit:
+        raise HTTPException(status_code=429, detail="요청이 너무 많습니다. 잠시 후 다시 시도해주세요.")
+    bucket.append(now)
 
 
 @router.get("/health")
@@ -44,14 +54,15 @@ def _notify_admins(title: str):
         db.close()
 
 
-@limiter.limit("10/minute")
 @router.post("/suggestions", response_model=SuggestionOut)
 def create_suggestion(
     body: SuggestionCreateIn,
     background_tasks: BackgroundTasks,
+    request: Request,
     student_key: str = Depends(require_student_key),
     db: Session = Depends(get_db),
 ):
+    _check_rate_limit(f"suggestion:{request.client.host}", 10, 60)
     s = Suggestion(
         student_key=student_key,
         grade=body.grade,

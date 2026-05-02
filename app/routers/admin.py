@@ -5,6 +5,7 @@ import html
 import json
 import logging
 import time
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict
 from urllib.parse import urlencode
@@ -13,10 +14,8 @@ import jwt
 import requests
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from app.core.config import settings
 from app.core.email import send_email
@@ -32,7 +31,17 @@ from app.schemas.suggestion import SuggestionAnswerIn, SuggestionOut
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
-limiter = Limiter(key_func=get_remote_address)
+
+_rate_store_admin: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit_admin(key: str, limit: int, window: int) -> None:
+    now = time.time()
+    bucket = _rate_store_admin[key]
+    bucket[:] = [t for t in bucket if now - t < window]
+    if len(bucket) >= limit:
+        raise HTTPException(status_code=429, detail="요청이 너무 많습니다. 잠시 후 다시 시도해주세요.")
+    bucket.append(now)
 
 
 def _load_vapid_private_key():
@@ -289,9 +298,9 @@ def send_answer_email(
     )
 
 
-@limiter.limit("10/minute")
 @router.post("/login", response_model=TokenOut)
-def admin_login(body: AdminLoginIn, db: Session = Depends(get_db)):
+def admin_login(body: AdminLoginIn, request: Request, db: Session = Depends(get_db)):
+    _check_rate_limit_admin(f"login:{request.client.host}", 10, 60)
     admin = db.query(Admin).filter(Admin.username == body.username).first()
     if not admin or not verify_password(body.password, admin.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
