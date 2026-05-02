@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.core.email import is_email_delivery_configured
 from app.db.session import get_db, SessionLocal
@@ -15,6 +17,7 @@ from app.schemas.suggestion import SuggestionCreateIn, SuggestionNotificationEma
 
 
 router = APIRouter(prefix="/api", tags=["public"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/health")
@@ -42,9 +45,11 @@ def _notify_admins(title: str):
 
 
 @router.post("/suggestions", response_model=SuggestionOut)
+@limiter.limit("10/minute")
 def create_suggestion(
     body: SuggestionCreateIn,
     background_tasks: BackgroundTasks,
+    request: Request,
     student_key: str = Depends(require_student_key),
     db: Session = Depends(get_db),
 ):

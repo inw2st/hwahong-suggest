@@ -13,8 +13,10 @@ import jwt
 import requests
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.core.config import settings
 from app.core.email import send_email
@@ -30,6 +32,7 @@ from app.schemas.suggestion import SuggestionAnswerIn, SuggestionOut
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 def _load_vapid_private_key():
@@ -287,7 +290,8 @@ def send_answer_email(
 
 
 @router.post("/login", response_model=TokenOut)
-def admin_login(body: AdminLoginIn, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def admin_login(body: AdminLoginIn, request: Request, db: Session = Depends(get_db)):
     admin = db.query(Admin).filter(Admin.username == body.username).first()
     if not admin or not verify_password(body.password, admin.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")

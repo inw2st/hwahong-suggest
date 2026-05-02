@@ -1,8 +1,28 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
+
+_SQL_INJECTION_PATTERNS = [
+    re.compile(r"PG_SLEEP\s*\(", re.IGNORECASE),
+    re.compile(r"DBMS_PIPE\s*\.\s*RECEIVE_MESSAGE", re.IGNORECASE),
+    re.compile(r"waitfor\s+delay\s+", re.IGNORECASE),
+    re.compile(r"sleep\s*\(\s*\d+\s*\)", re.IGNORECASE),
+    re.compile(r"XOR\s*\(?\s*if\s*\(\s*now\s*\(\s*\)\s*=\s*sysdate\s*\(\s*\)", re.IGNORECASE),
+    re.compile(r"\(select\s*\(\s*0\s*\)\s*from\s*\(\s*select\s*\(\s*sleep", re.IGNORECASE),
+    re.compile(r"-1\s+OR\s+\d+\+\d+-\d+-1=0\+0\+0\+1", re.IGNORECASE),
+    re.compile(r"-1'\s+OR\s+\d+\+\d+-\d+-1=0\+0\+0\+1", re.IGNORECASE),
+    re.compile(r"-1\"\s+OR\s+\d+\+\d+-\d+-1=0\+0\+0\+1", re.IGNORECASE),
+]
+
+
+def _contains_sql_injection(value: str) -> bool:
+    for pattern in _SQL_INJECTION_PATTERNS:
+        if pattern.search(value):
+            return True
+    return False
 
 
 def _validate_email(value: str) -> str:
@@ -22,11 +42,25 @@ class SuggestionCreateIn(BaseModel):
     title: str = Field(min_length=2, max_length=140)
     content: str = Field(min_length=5, max_length=10_000)
 
+    @field_validator("content")
+    @classmethod
+    def validate_no_sqli(cls, value: str) -> str:
+        if _contains_sql_injection(value):
+            raise ValueError("부적절한 내용이 포함되어 있습니다.")
+        return value
+
 
 class SuggestionUpdateIn(BaseModel):
     grade: int | None = Field(default=None, ge=1, le=3)
     title: str | None = Field(default=None, min_length=2, max_length=140)
     content: str | None = Field(default=None, min_length=5, max_length=10_000)
+
+    @field_validator("content")
+    @classmethod
+    def validate_no_sqli(cls, value: str | None) -> str | None:
+        if value is not None and _contains_sql_injection(value):
+            raise ValueError("부적절한 내용이 포함되어 있습니다.")
+        return value
 
 
 class SuggestionAnswerIn(BaseModel):
