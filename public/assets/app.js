@@ -61,7 +61,18 @@
     }
 
     if (!res.ok) {
-      const message = (data && (data.detail || data.message)) ? (data.detail || data.message) : ('HTTP ' + res.status);
+      let message;
+      if (data && data.detail) {
+        if (Array.isArray(data.detail)) {
+          message = data.detail.map(function(d) { return d.msg; }).join(", ");
+        } else {
+          message = String(data.detail);
+        }
+      } else if (data && data.message) {
+        message = String(data.message);
+      } else {
+        message = "HTTP " + res.status;
+      }
       const err = new Error(message);
       err.status = res.status;
       err.data = data;

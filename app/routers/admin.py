@@ -13,7 +13,7 @@ import jwt
 import requests
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -291,7 +291,7 @@ def send_answer_email(
 
 @router.post("/login", response_model=TokenOut)
 @limiter.limit("10/minute")
-def admin_login(body: AdminLoginIn, request: Request, db: Session = Depends(get_db)):
+def admin_login(body: AdminLoginIn, db: Session = Depends(get_db)):
     admin = db.query(Admin).filter(Admin.username == body.username).first()
     if not admin or not verify_password(body.password, admin.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")

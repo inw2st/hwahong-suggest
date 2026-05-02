@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -49,7 +49,6 @@ def _notify_admins(title: str):
 def create_suggestion(
     body: SuggestionCreateIn,
     background_tasks: BackgroundTasks,
-    request: Request,
     student_key: str = Depends(require_student_key),
     db: Session = Depends(get_db),
 ):
