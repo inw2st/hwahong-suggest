@@ -44,8 +44,8 @@ def _notify_admins(title: str):
         db.close()
 
 
-@router.post("/suggestions", response_model=SuggestionOut)
 @limiter.limit("10/minute")
+@router.post("/suggestions", response_model=SuggestionOut)
 def create_suggestion(
     body: SuggestionCreateIn,
     background_tasks: BackgroundTasks,

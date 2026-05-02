@@ -289,8 +289,8 @@ def send_answer_email(
     )
 
 
-@router.post("/login", response_model=TokenOut)
 @limiter.limit("10/minute")
+@router.post("/login", response_model=TokenOut)
 def admin_login(body: AdminLoginIn, db: Session = Depends(get_db)):
     admin = db.query(Admin).filter(Admin.username == body.username).first()
     if not admin or not verify_password(body.password, admin.password_hash):
