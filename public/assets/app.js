@@ -12,6 +12,38 @@
   const API_BASE = override
     ? override.replace(/\/$/, '')
     : (isFrontendDevServer ? 'http://localhost:8000/api' : '/api');
+  let runtimeConfig = {
+    vapidPublicKey: '',
+    pushEnabled: false,
+  };
+  let runtimeConfigPromise = null;
+
+  async function loadRuntimeConfig() {
+    if (!runtimeConfigPromise) {
+      runtimeConfigPromise = fetch('/api/runtime-config', {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      })
+        .then(async (res) => {
+          if (!res.ok) throw new Error('Failed to load runtime config');
+          const data = await res.json();
+          runtimeConfig = {
+            vapidPublicKey: data && data.vapid_public_key ? String(data.vapid_public_key) : '',
+            pushEnabled: Boolean(data && data.push_enabled),
+          };
+          return runtimeConfig;
+        })
+        .catch((err) => {
+          runtimeConfigPromise = null;
+          throw err;
+        });
+    }
+    return runtimeConfigPromise;
+  }
+
+  function getRuntimeConfig() {
+    return runtimeConfig;
+  }
 
   function getStudentKey() {
     const key = localStorage.getItem('student_key');
@@ -152,6 +184,8 @@
     API_BASE,
     apiFetch,
     getStudentKey,
+    getRuntimeConfig,
+    loadRuntimeConfig,
     supportsNotifications,
     supportsPushNotifications,
     toast,

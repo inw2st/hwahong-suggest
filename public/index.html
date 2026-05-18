@@ -177,32 +177,21 @@
 
       studentKeyEl.textContent = App.getStudentKey();
 
-      const VAPID_PUBLIC_KEY = 'BJpbfzPQdhyWeK9lv9Rs6S3bdqYZpgAUqTuw6j0-ME2sxXWM8THv4d1ZCow2BtjPoULAqJb5yy86mPkXly0Fqpc';
-
       let swRegistration = null;
       let isPushSubscribed = false;
+      let vapidPublicKey = '';
       const canUseNotifications = App.supportsNotifications();
       const canUsePush = App.supportsPushNotifications();
 
-      if (canUsePush) {
-        navigator.serviceWorker.register('/sw.js')
-          .then((reg) => {
-            swRegistration = reg;
-            reg.pushManager.getSubscription().then((sub) => {
-              if (sub) { isPushSubscribed = true; updateNotifyState(); }
-            });
-          })
-          .catch((err) => console.log('SW 등록 실패:', err));
-      }
-
       async function setupPushNotification() {
+        if (!vapidPublicKey) { App.toast('서버 푸시 알림이 아직 설정되지 않았습니다.', 'error'); return false; }
         if (!canUsePush || !swRegistration) { App.toast('이 브라우저에서는 알림을 지원하지 않습니다.', 'error'); return false; }
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') { App.toast('알림 권한이 필요합니다.', 'error'); return false; }
         try {
           const sub = await swRegistration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
           });
           await App.apiFetch('/push/subscribe', {
             method: 'POST',
@@ -264,6 +253,15 @@
       renderGrades(1);
 
       function updateNotifyState() {
+        notifyBtn.disabled = false;
+        notifyBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        if (!vapidPublicKey) {
+          notifyState.textContent = '서버 푸시 알림이 아직 설정되지 않았어요.';
+          notifyBtn.textContent = '알림 사용 불가';
+          notifyBtn.disabled = true;
+          notifyBtn.classList.add('opacity-60', 'cursor-not-allowed');
+          return;
+        }
         if (!canUseNotifications) {
           notifyState.textContent = '이 브라우저에서는 알림을 지원하지 않아요.';
           notifyBtn.textContent = '알림 미지원';
@@ -284,7 +282,34 @@
           notifyBtn.textContent = '알림 설정하기';
         }
       }
-      updateNotifyState();
+
+      async function initPush() {
+        try {
+          const runtimeConfig = await App.loadRuntimeConfig();
+          vapidPublicKey = runtimeConfig.vapidPublicKey;
+        } catch (err) {
+          console.log('런타임 설정 로드 실패:', err);
+        }
+
+        if (vapidPublicKey && canUsePush) {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => {
+              swRegistration = reg;
+              reg.pushManager.getSubscription().then((sub) => {
+                if (sub) isPushSubscribed = true;
+                updateNotifyState();
+              });
+            })
+            .catch((err) => {
+              console.log('SW 등록 실패:', err);
+              updateNotifyState();
+            });
+          return;
+        }
+
+        updateNotifyState();
+      }
+      initPush();
 
       notifyBtn.addEventListener('click', async () => {
         if (!canUseNotifications) { App.toast('이 브라우저에서는 알림을 지원하지 않습니다.', 'info'); return; }
@@ -385,7 +410,10 @@
               foot.append(emailBtn);
             } else {
               const confirmBtn = App.el('button', { class: 'px-4 py-2 rounded-2xl bg-blue-700 text-white text-sm font-bold shadow-sm hover:bg-blue-800 transition' }, ['알림 설정']);
-              confirmBtn.addEventListener('click', () => { overlay.remove(); setupPushNotification(); });
+              confirmBtn.addEventListener('click', async () => {
+                overlay.remove();
+                await setupPushNotification();
+              });
               foot.append(confirmBtn);
             }
             card.append(head, body, foot);

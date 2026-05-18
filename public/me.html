@@ -86,32 +86,27 @@
         localStorage.setItem('student_key', linkedStudentKey);
       }
       studentKeyEl.textContent = App.getStudentKey();
+      const notifyBtn = document.getElementById('notifyBtn');
 
       const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       if (!isLocal) document.getElementById('devButtons').style.display = 'none';
 
-      const VAPID_PUBLIC_KEY = 'BJpbfzPQdhyWeK9lv9Rs6S3bdqYZpgAUqTuw6j0-ME2sxXWM8THv4d1ZCow2BtjPoULAqJb5yy86mPkXly0Fqpc';
-
       let swRegistration = null;
       let pushSubscription = null;
+      let vapidPublicKey = '';
       const canUseNotifications = App.supportsNotifications();
       const canUsePush = App.supportsPushNotifications();
 
-      if (canUsePush) {
-        navigator.serviceWorker.register('/sw.js')
-          .then((reg) => {
-            swRegistration = reg;
-            reg.pushManager.getSubscription().then((sub) => { if (sub) pushSubscription = sub; });
-          })
-          .catch((err) => console.log('SW 등록 실패:', err));
-      }
-
       async function subscribeToPush() {
+        if (!vapidPublicKey) {
+          App.toast('서버 푸시 알림이 아직 설정되지 않았습니다.', 'error');
+          return null;
+        }
         if (!canUsePush || !swRegistration) return null;
         try {
           const sub = await swRegistration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
           });
           await App.apiFetch('/push/subscribe', {
             method: 'POST',
@@ -302,6 +297,50 @@
         } catch {}
       }
 
+      async function initPush() {
+        try {
+          const runtimeConfig = await App.loadRuntimeConfig();
+          vapidPublicKey = runtimeConfig.vapidPublicKey;
+        } catch (err) {
+          console.log('런타임 설정 로드 실패:', err);
+        }
+
+        if (vapidPublicKey && canUsePush) {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => {
+              swRegistration = reg;
+              reg.pushManager.getSubscription().then((sub) => { if (sub) pushSubscription = sub; });
+            })
+            .catch((err) => console.log('SW 등록 실패:', err));
+        }
+
+        updateNotifyButton();
+      }
+
+      function updateNotifyButton() {
+        notifyBtn.disabled = false;
+        notifyBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        if (!vapidPublicKey) {
+          notifyBtn.textContent = '알림 사용 불가';
+          notifyBtn.disabled = true;
+          notifyBtn.classList.add('opacity-60', 'cursor-not-allowed');
+          return;
+        }
+        if (!canUseNotifications) {
+          notifyBtn.textContent = '알림 미지원';
+          notifyBtn.disabled = true;
+          notifyBtn.classList.add('opacity-60', 'cursor-not-allowed');
+          return;
+        }
+        if (pushSubscription) {
+          notifyBtn.textContent = '알림 설정 완료 ✓';
+          notifyBtn.disabled = true;
+          notifyBtn.classList.add('opacity-60', 'cursor-not-allowed');
+          return;
+        }
+        notifyBtn.textContent = '알림 설정';
+      }
+
       document.getElementById('refreshBtn').addEventListener('click', load);
       document.getElementById('testNotifyBtn').addEventListener('click', async () => {
         if (!canUseNotifications) { App.toast('이 브라우저에서는 알림을 지원하지 않습니다.', 'info'); return; }
@@ -318,6 +357,7 @@
         const p = await Notification.requestPermission();
         if (p !== 'granted') { App.toast('알림이 허용되지 않았습니다.', 'error'); return; }
         await subscribeToPush();
+        updateNotifyButton();
         App.toast('알림이 켜졌습니다!', 'success');
         try {
           const items = await App.apiFetch('/me/suggestions');
@@ -331,16 +371,10 @@
         } catch {}
       });
 
+      initPush();
       load();
       setInterval(pollNewAnswers, 5000);
       pollNewAnswers();
-
-      if (!canUseNotifications) {
-        const notifyBtn = document.getElementById('notifyBtn');
-        notifyBtn.textContent = '알림 미지원';
-        notifyBtn.disabled = true;
-        notifyBtn.classList.add('opacity-60', 'cursor-not-allowed');
-      }
     </script>
   </body>
 </html>

@@ -11,7 +11,7 @@
 - Frontend: 정적 HTML/CSS/Vanilla JS (Tailwind CDN)
 - Notification: Web Push (VAPID)
 - Optional email notifications: SMTP
-- Infra: Nginx + systemd (배포 스크립트 제공)
+- Infra: Docker Compose + Caddy or Nginx + systemd
 
 ## 핵심 기능
 
@@ -61,6 +61,9 @@
 │   ├── index.html
 │   ├── me.html
 │   └── sw.js
+├── Caddyfile
+├── docker-compose.yml
+├── Dockerfile
 ├── scripts/
 │   └── create_admin.py       # 관리자 생성/비밀번호 갱신
 ├── deploy/
@@ -92,6 +95,7 @@ SMTP_FROM_NAME=화홍고 학생회 건의함
 SMTP_REPLY_TO_EMAIL=
 SMTP_USE_TLS=true
 SMTP_USE_SSL=false
+APP_HOST=your-domain.com
 AUTO_CREATE_TABLES=true
 ```
 
@@ -102,6 +106,7 @@ AUTO_CREATE_TABLES=true
 - `PUBLIC_BASE_URL`: 이메일/외부 링크 생성에 사용할 공개 사이트 주소
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: Web Push 전송용 키
 - `SMTP_*`: 답변 이메일 알림 전송용 SMTP 설정
+- `APP_HOST`: Caddy가 HTTPS를 발급할 도메인 (`example.com`)
 - `AUTO_CREATE_TABLES`: 앱 시작 시 테이블 자동 생성 여부
 
 ## 데이터 모델
@@ -154,7 +159,36 @@ AUTO_CREATE_TABLES=true
 - `DELETE /unsubscribe`
 - `POST /admin/subscribe`
 
-## 배포
+## Docker Compose 배포
+
+도메인이 이미 있다면, 이 경로가 가장 간단합니다.
+
+1. 서버에 Docker Engine / Docker Compose Plugin 설치
+2. 프로젝트를 서버에 복사
+3. `.env.example` 을 `.env` 로 복사하고 실제 값을 입력
+4. DNS A 레코드를 서버 IP로 연결
+5. 아래 명령으로 실행
+
+```bash
+docker compose up -d --build
+```
+
+Caddy가 `APP_HOST` 기준으로 자동 HTTPS를 처리합니다.
+
+```bash
+docker compose logs -f
+docker compose exec app python scripts/create_admin.py --username admin --password "strong-password"
+docker compose pull
+docker compose up -d
+```
+
+운영 팁:
+
+- Azure PostgreSQL을 쓸 때는 `DATABASE_URL`에 `?sslmode=require` 를 붙이는 편이 안전합니다.
+- 푸시 알림 공개키는 이제 서버 런타임 설정에서 프런트로 내려가므로, HTML 파일을 직접 수정하지 않아도 됩니다.
+- 서버 이전 시에는 `.env`, 도메인 DNS, DB 데이터만 맞추면 거의 그대로 재배포할 수 있습니다.
+
+## Legacy Ubuntu 배포
 
 `deploy/setup.sh`를 기준으로 Ubuntu 서버에 다음 구성을 자동화합니다.
 

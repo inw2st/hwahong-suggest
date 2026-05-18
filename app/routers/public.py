@@ -7,6 +7,7 @@ from collections import defaultdict
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.email import is_email_delivery_configured
 from app.db.session import get_db, SessionLocal
 from app.deps import require_student_key
@@ -33,6 +34,15 @@ def _check_rate_limit(key: str, limit: int, window: int) -> None:
 @router.get("/health")
 def health():
     return {"ok": True}
+
+
+@router.get("/runtime-config")
+def runtime_config():
+    """Expose safe runtime configuration for static frontend pages."""
+    return {
+        "vapid_public_key": settings.VAPID_PUBLIC_KEY,
+        "push_enabled": bool(settings.VAPID_PUBLIC_KEY and settings.VAPID_PRIVATE_KEY),
+    }
 
 
 def _notify_admins(title: str):
